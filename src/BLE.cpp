@@ -8,7 +8,6 @@
 */
 
 #include "BLE.h"
-#include "particle.h"
 
 // BLE functions
 
