@@ -12,7 +12,7 @@
 // BLE functions
 
 // advertise
-int ble_advertisement() {
+void ble_advertisement() {
     BLE.advertise();
     BLE.setAdvertisingInterval(100);
     
@@ -38,6 +38,8 @@ void onDisconnected(const BlePeerDevice& peer, void* context) {
 int ble_sendData(const uint8_t* data, size_t size) {
     BleCharacteristic c;
     c.setValue(data, size);
+
+    return 1;
 }
 
 

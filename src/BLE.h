@@ -5,7 +5,7 @@ const char* UUID = "38bdd4ec-fee9-4e99-b045-a3911a7171cd";
 // BLE functions
 
 // advertise
-int ble_advertisement();
+void ble_advertisement();
 
 // connect
 void onConnected(const BlePeerDevice& peer, void* context);

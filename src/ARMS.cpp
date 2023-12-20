@@ -10,8 +10,9 @@
  */
 
 // Include Particle Device OS APIs
-#include "Particle.h"
 #include "BLE.h"
+#include "thresholds.h"
+#include "p750.h"
 
 // Manual Cloud
 SYSTEM_MODE(MANUAL);
@@ -57,6 +58,7 @@ void setup() {
 
 
   // p750 setup
+  
 
 
 
