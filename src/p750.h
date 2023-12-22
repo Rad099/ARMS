@@ -6,7 +6,7 @@
  * ECE Department
  * p750 sensor header file
  * Contains all functions for readings from the sensor
- * and contains I2P protocol functions
+ * and contains I2C protocol functions
  * 
  */
 

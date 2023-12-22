@@ -14,6 +14,7 @@
 #include "thresholds.h"
 #include "p750.h"
 
+
 // Manual Cloud
 SYSTEM_MODE(MANUAL);
 
@@ -29,12 +30,25 @@ int PM2_5Thresh = 0; // TODO: implement
 int PM10Thresh = 0; // TODO: implement
 int VOCThresh = 0; // TODO: implement
 int COThresh = 0; // TODO: implement
+int UVThresh = 0; // TODO: implement 
 
 volatile bool wakeUp = false;
 
 void wakeUpISR() {
   wakeUp = true;
 }
+
+// pins
+const int UV_pin = A1;
+const int CO_pin = A2;
+const int p750_read_pin = D0;
+const int clock_pin = D1;
+
+const int sleepTime = 20000;
+
+SystemSleepConfiguration config;
+
+
 
 // setup() runs once, when the device is first turned on
 void setup() {
@@ -45,10 +59,10 @@ void setup() {
 
 
   // BLE section
-  BLE.on();
-  ble_advertisement();
-  BLE.onConnected(onConnected, nullptr);
-  BLE.onDisconnected(onDisconnected, nullptr);
+  //BLE.on();
+  //ble_advertisement();
+  //BLE.onConnected(onConnected, nullptr);
+  //BLE.onDisconnected(onDisconnected, nullptr);
 
 
 
@@ -58,15 +72,20 @@ void setup() {
 
 
   // p750 setup
+ 
   
 
 
 
   // SPEC CO setup
+  pinMode(CO_pin, INPUT);
+  attachInterrupt(CO_pin, wakeUpISR, RISING);
 
   
 
   // UV setup
+  pinMode(UV_pin, INPUT);
+  attachInterrupt(UV_pin, wakeUpISR, RISING);
 
 
 
@@ -75,13 +94,49 @@ void setup() {
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
+  static int currentIndex = 0;
+  int sensorValue = 0;
+  unsigned long startTime = millis();
+  bool sleep = true;
 
   // begin sensor reading
+
+  while (millis() - startTime < sleepTime) {
+    // Round Robin Read
+    switch(currentIndex) {
+      case 0:
+      sensorValue = analogRead(UV_pin);
+      break;
+  
+    }
+
+    if (sensorValue >= 100) {
+      sleep = false;
+      break;
+    }
+
+    if (sleep) {
+      config.mode(SystemSleepMode::STOP)
+      .gpio(UV_pin, RISING)
+      .duration(15min);
+      System.sleep(config);
+    }
+
+    if (wakeUp) {
+      wakeUp = false;
+    }
+
+  }
+
+  
+
 
   // apply sleep modes when compatible
 
   // interrupts for thresholds notifications
 
   // interrupts for battery charging and depletion
+
+  // interrupt for app connection
 
 }
