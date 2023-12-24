@@ -12,9 +12,9 @@
 // BLE functions
 
 // advertise
-void ble_advertisement() {
+int ble_advertisement() {
+    BLE.setAdvertisingInterval(160);
     BLE.advertise();
-    BLE.setAdvertisingInterval(100);
     
 }
 

@@ -59,10 +59,10 @@ void setup() {
 
 
   // BLE section
-  //BLE.on();
-  //ble_advertisement();
-  //BLE.onConnected(onConnected, nullptr);
-  //BLE.onDisconnected(onDisconnected, nullptr);
+  BLE.on();
+  ble_advertisement();
+  BLE.onConnected(onConnected, nullptr);
+  BLE.onDisconnected(onDisconnected, nullptr);
 
 
 
@@ -117,7 +117,7 @@ void loop() {
 
     if (sleep) {
       config.mode(SystemSleepMode::STOP)
-      .gpio(UV_pin, RISING)
+      .gpio(UV_pin || CO_pin || p750_read_pin, RISING)
       .duration(15min);
       System.sleep(config);
     }
