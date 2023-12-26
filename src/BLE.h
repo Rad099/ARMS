@@ -10,10 +10,8 @@
 
 #include "particle.h"
 
-const char* UUID = "38bdd4ec-fee9-4e99-b045-a3911a7171cd";
-
 // service
-BleUuid AQIService("d06d6cd1-f482-4a87-9199-328384bb7d87");
+BleUuid AQIService("38bdd4ec-fee9-4e99-b045-a3911a7171cd");
 
 // characteristics
 BleUuid vocCharUuid("d6eedc89-58c6-4d64-8120-f31737032cd0");
@@ -28,7 +26,7 @@ BleCharacteristic pm2_5Characteristic("pm2_5", BleCharacteristicProperty::NOTIFY
 BleCharacteristic pm1Characteristic("pm1", BleCharacteristicProperty::NOTIFY, pm1CharUuid, AQIService);
 BleCharacteristic pm10Characteristic("pm10", BleCharacteristicProperty::NOTIFY, pm10CharUuid, AQIService);
 BleCharacteristic coCharacteristic("co", BleCharacteristicProperty::NOTIFY, coCharUuid, AQIService);
-BleCharacteristic uvCharacteristic("voc", BleCharacteristicProperty::NOTIFY, uvCharUuid, AQIService);
+BleCharacteristic uvCharacteristic("uv", BleCharacteristicProperty::NOTIFY, uvCharUuid, AQIService);
 
 
 

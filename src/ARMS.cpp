@@ -60,7 +60,12 @@ void setup() {
 
   // BLE section
   BLE.on();
-  ble_advertisement();
+  BLE.addCharacteristic(uvCharacteristic);
+  BleAdvertisingData advData;
+
+  advData.appendServiceUUID(AQIService);
+  BLE.advertise(&advData);
+  //ble_advertisement();
   BLE.onConnected(onConnected, nullptr);
   BLE.onDisconnected(onDisconnected, nullptr);
 
@@ -78,8 +83,8 @@ void setup() {
 
 
   // SPEC CO setup
-  pinMode(CO_pin, INPUT);
-  attachInterrupt(CO_pin, wakeUpISR, RISING);
+  //pinMode(CO_pin, INPUT);
+  //attachInterrupt(CO_pin, wakeUpISR, RISING);
 
   
 
@@ -101,32 +106,39 @@ void loop() {
 
   // begin sensor reading
 
-  while (millis() - startTime < sleepTime) {
+  //while (millis() - startTime < sleepTime) {
     // Round Robin Read
-    switch(currentIndex) {
-      case 0:
+    //switch(currentIndex) {
+      //case 0:
+    while (BLE.connected()) {
+
+      uint8_t buffer[8];
       sensorValue = analogRead(UV_pin);
-      break;
+      memcpy(buffer, &sensorValue, sizeof(sensorValue));
+      uvCharacteristic.setValue(buffer, sizeof(buffer));
+      delay(1000);
+      //break;
   
+    //}
     }
 
-    if (sensorValue >= 100) {
-      sleep = false;
-      break;
-    }
+    //if (sensorValue >= 100) {
+      //sleep = false;
+     // break;
+    //}
 
-    if (sleep) {
-      config.mode(SystemSleepMode::STOP)
-      .gpio(UV_pin || CO_pin || p750_read_pin, RISING)
-      .duration(15min);
-      System.sleep(config);
-    }
+    //if (sleep) {
+     // config.mode(SystemSleepMode::STOP)
+     // .gpio(UV_pin || CO_pin || p750_read_pin, RISING)
+     // .duration(15min);
+     // System.sleep(config);
+    //}
 
-    if (wakeUp) {
-      wakeUp = false;
-    }
+    //if (wakeUp) {
+     // wakeUp = false;
+    //}
 
-  }
+  //}
 
   
 
