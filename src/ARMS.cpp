@@ -32,7 +32,9 @@ int VOCThresh = 0; // TODO: implement
 int COThresh = 0; // TODO: implement
 int UVThresh = 0; // TODO: implement 
 
-// service
+void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
+
+// AQI service for sending AQI data
 BleUuid AQIService("38bdd4ec-fee9-4e99-b045-a3911a7171cd");
 
 // characteristics
@@ -50,6 +52,19 @@ BleCharacteristic pm10Characteristic("pm10", BleCharacteristicProperty::NOTIFY, 
 BleCharacteristic coCharacteristic("co", BleCharacteristicProperty::NOTIFY, coCharUuid, AQIService);
 BleCharacteristic uvCharacteristic("uv", BleCharacteristicProperty::NOTIFY, uvCharUuid, AQIService);
 
+// Service for retreiving thresholds
+BleUuid ThresholdService("");
+
+BleUuid pm1TreshUuid("");
+BleUuid pm2_5TreshUuid();
+BleUuid pm10TreshUuid();
+BleUuid vocTreshUuid();
+BleUuid coTreshUuid();
+BleUuid uvThreshUuid();
+
+// characterisitics
+BleCharacteristic pm1Char(pm1TreshUuid, BleCharacteristicProperty::WRITE, onDataReceived, &PM1Thresh, &PM1Thresh, sizeof(PM1Thresh));
+
 
 volatile bool wakeUp = false;
 
@@ -57,7 +72,10 @@ void wakeUpISR() {
   wakeUp = true;
 }
 
-void MainHandler();
+void MainHandler(); //  main loop for reading and notifying
+void BLEStartupHandler(); // Handles band startup for collecting threshold data from app. RUNS ONCE in setup()
+void 
+
 
 // pins
 const int UV_pin = A1;
@@ -68,7 +86,7 @@ const int clock_pin = D1;
 const int sleepTime = 20000;
 const int bufferTime = 5000;
 
-SystemSleepConfiguration config;
+
 
 
 
@@ -93,10 +111,7 @@ void setup() {
   BleAdvertisingData advData;
 
   advData.appendServiceUUID(AQIService);
-  BLE.advertise(&advData);
-  //ble_advertisement();
-  BLE.onConnected(onConnected, nullptr);
-  BLE.onDisconnected(onDisconnected, nullptr);
+  BLEStartupHandler();
 
 
 
@@ -182,12 +197,10 @@ void MainHandler() {
     
   }
 
-  if (sleep) {
-      config.mode(SystemSleepMode::STOP)
-      .gpio(UV_pin || CO_pin || p750_read_pin, RISING) // TODO: add button gpio
-      .duration(60min);
-      System.sleep(config);
 
-    }
+
+}
+
+BLEStartupHandler() {
 
 }
