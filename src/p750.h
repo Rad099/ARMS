@@ -13,18 +13,13 @@
 
 #include "particle.h"
 
-int address = 0x12; // p750 I2C address given by datasheet
-
-
-
-// setup and begin
 void setupI2C();
 
 
 int toggleTransmission(int mode);
 
 
-int requestData(int length);
+int readData(uint8_t type);
 
 
 

@@ -9,21 +9,25 @@
  * and functions to transfer values from the application
  */
 
-#include "particle.h"
+#ifndef THRESHOLDS_H
+#define THRESHOLDS_H
 
 
-// retrieve values
-
+struct userThresholds;
 
 
 // set values
-void set_thresholds(float newThreshold, int threshType);
+void waitForThresholds(bool isSet);
 
 
 
 // change values during loop
-void changeTreshISR();
+void changeTreshISR(bool& mode, bool& isSet);
 
+int compareStructs(userThresholds* prev, userThresholds* curr);
+
+
+#endif
 
 
 

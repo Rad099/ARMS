@@ -13,6 +13,7 @@
 #include "BLE.h"
 #include "thresholds.h"
 #include "p750.h"
+#include "uv.h"
 
 
 // Manual Cloud
@@ -25,56 +26,51 @@ SYSTEM_THREAD(ENABLED);
 // View logs with CLI using 'particle serial monitor --follow'
 SerialLogHandler logHandler(LOG_LEVEL_INFO);
 
-int PM1Thresh = 0; // TODO: implement
-int PM2_5Thresh = 0; // TODO: implement
-int PM10Thresh = 0; // TODO: implement
-int VOCThresh = 0; // TODO: implement
-int COThresh = 0; // TODO: implement
-int UVThresh = 0; // TODO: implement 
+// I2C Command registers
+const uint8_t pm1Reg = 0x00;
+const uint8_t pm2_5Reg = 0x02;
+const uint8_t pm10Reg = 0x04;
+const uint8_t vocReg = 0x20;
+const uint8_t I2CAddr = 0x12;
 
-void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
+
+struct indices {
+  u_int16_t PM1; 
+  u_int16_t PM2_5; 
+  u_int16_t PM10; 
+  u_int16_t VOC; 
+  u_int16_t CO; 
+  u_int16_t UV;
+};
+
+
+
+indices currentIndex;
+userThresholds* thresholds;
 
 // AQI service for sending AQI data
 BleUuid AQIService("38bdd4ec-fee9-4e99-b045-a3911a7171cd");
+// characteristic
+BleUuid AQICharUuid("d6eedc89-58c6-4d64-8120-f31737032cd0");
+BleCharacteristic AQICharacteristic("AQI", BleCharacteristicProperty::NOTIFY, AQICharUuid, AQIService);
 
-// characteristics
-BleUuid vocCharUuid("d6eedc89-58c6-4d64-8120-f31737032cd0");
-BleUuid pm2_5CharUuid("a1378902-6397-4f84-ac7b-0271e6f0ee17");
-BleUuid pm10CharUuid("ab3386a7-68a2-43c2-97ff-5ddc95a0ca43");
-BleUuid pm1CharUuid("e5e09d95-f6ef-45b9-8703-9ed4eb642131");
-BleUuid coCharUuid("3f0f59d8-e00d-47c6-9dc2-42007f79f4b8");
-BleUuid uvCharUuid("643456f8-d08e-4f33-abea-0c8fb65cdfad");
-
-BleCharacteristic vocCharacteristic("voc", BleCharacteristicProperty::NOTIFY, vocCharUuid, AQIService);
-BleCharacteristic pm2_5Characteristic("pm2_5", BleCharacteristicProperty::NOTIFY, pm2_5CharUuid, AQIService);
-BleCharacteristic pm1Characteristic("pm1", BleCharacteristicProperty::NOTIFY, pm1CharUuid, AQIService);
-BleCharacteristic pm10Characteristic("pm10", BleCharacteristicProperty::NOTIFY, pm10CharUuid, AQIService);
-BleCharacteristic coCharacteristic("co", BleCharacteristicProperty::NOTIFY, coCharUuid, AQIService);
-BleCharacteristic uvCharacteristic("uv", BleCharacteristicProperty::NOTIFY, uvCharUuid, AQIService);
 
 // Service for retreiving thresholds
 BleUuid ThresholdService("");
+BleUuid ThreshUuid("");
+// characterisitic
+BleCharacteristic pm1Char("Tresholds", BleCharacteristicProperty::WRITE_WO_RSP, ThreshUuid, ThresholdService, onDataReceived, NULL);
 
-BleUuid pm1TreshUuid("");
-BleUuid pm2_5TreshUuid();
-BleUuid pm10TreshUuid();
-BleUuid vocTreshUuid();
-BleUuid coTreshUuid();
-BleUuid uvThreshUuid();
-
-// characterisitics
-BleCharacteristic pm1Char(pm1TreshUuid, BleCharacteristicProperty::WRITE, onDataReceived, &PM1Thresh, &PM1Thresh, sizeof(PM1Thresh));
-
-
-volatile bool wakeUp = false;
-
-void wakeUpISR() {
-  wakeUp = true;
-}
 
 void MainHandler(); //  main loop for reading and notifying
 void BLEStartupHandler(); // Handles band startup for collecting threshold data from app. RUNS ONCE in setup()
-void 
+void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
+// set values
+void waitForThresholds();
+// change values during loop
+void changeTreshISR(bool& mode, bool& isSet);
+
+
 
 
 // pins
@@ -87,26 +83,25 @@ const int sleepTime = 20000;
 const int bufferTime = 5000;
 
 
-
-
+bool threshConfigMode = true;
+bool isSet = false;
 
 // setup() runs once, when the device is first turned on
 void setup() {
   // Put initialization like pinMode and begin functions here
 
 
-  Serial.begin(9600);
+  //Serial.begin(9600);
 
 
   // BLE section
   BLE.on();
-  BLE.addCharacteristic(uvCharacteristic);
-  BLE.addCharacteristic(coCharacteristic);
-  BLE.addCharacteristic(pm10Characteristic);
-  BLE.addCharacteristic(pm1Characteristic);
-  BLE.addCharacteristic(pm2_5Characteristic);
-  BLE.addCharacteristic(vocCharacteristic);
+  // setup thresholds
 
+
+
+  BLE.addCharacteristic(AQICharacteristic);
+ 
 
   BleAdvertisingData advData;
 
@@ -121,20 +116,19 @@ void setup() {
 
 
   // p750 setup
+  setupI2C();
  
   
 
 
 
   // SPEC CO setup
-  //pinMode(CO_pin, INPUT);
-  //attachInterrupt(CO_pin, wakeUpISR, RISING);
+  pinMode(CO_pin, INPUT);
 
   
 
   // UV setup
   pinMode(UV_pin, INPUT);
-  attachInterrupt(UV_pin, wakeUpISR, RISING);
 
 
 
@@ -147,9 +141,6 @@ void loop() {
   MainHandler();
   
 
-
-  // apply sleep modes when compatible
-
   // interrupts for thresholds notifications
 
   // interrupts for battery charging and depletion
@@ -159,48 +150,35 @@ void loop() {
 }
 
 void MainHandler() {
-  int currentIndex = 0;
-  int sensorValue = 0;
-  int isSafe = 1;
-  unsigned long startTime = millis();
-  bool sleep = true;
+  static unsigned long lastReadTime = 0;
+  static bool inConfirmMinute = false;
 
-  while (millis() - startTime <= sleepTime) {
+ // if (millis() - lastReadTime > (inConfirmMinute ? 1000: 60000)) {
 
-    // Round Robin Read
-    switch(sensorValue) {
-      case 0:
-        sensorValue = analogRead(UV_pin);
-        if (sensorValue >= UVThresh) {
-          currentIndex = sensorValue;
-          isSafe = 0;
-          // TODO: send notification and change LEDs
-        }
-        break;
-      case 1:
-        sensorValue = analogRead(CO_pin);
-        if (sensorValue >= COThresh) {
-          currentIndex = sensorValue;
-          isSafe = 0;
-          // TODO: send notification and change LEDs
-        }
+      // read the sesnors
 
-      case 2:
-        break; // TODO: implement I2C for each pollutant from p750
-
-    }
-
-    if (!isSafe) {
-      sleep = false;
-      startTime = millis();
-    } 
     
+    
+ // }
+
+
+
+}
+
+
+void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context) {
+  if (len == sizeof(userThresholds*)) {
+    memcpy(&thresholds, data, sizeof(thresholds));
+
   }
-
-
-
 }
 
-BLEStartupHandler() {
+// set values
+//void waitForThresholds() {
 
-}
+//}
+
+
+
+// change values during loop
+void changeTreshISR(bool& mode, bool& isSet);

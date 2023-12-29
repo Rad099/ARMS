@@ -24,11 +24,21 @@ void setupI2C() {
 
 int toggleTransmission(int mode) {
     if (mode == 1) {
-        Wire.beginTransmission(address);
+        Wire.beginTransmission(0x12);
     } else {
         Wire.endTransmission();
     }
 }
 
 
-int requestData(int length);
+uint16_t readData(uint8_t type, uint8_t addr) {
+    Wire.beginTransmission(addr);
+    Wire.write(type);
+    Wire.endTransmission(false);
+
+    Wire.requestFrom((int)addr, 1);
+    while(!Wire.available());
+
+    return Wire.read();
+
+}

@@ -8,7 +8,8 @@
 */
 
 
-#include "particle.h"
+#ifndef BLE_H
+#define BLE_H
 
 
 
@@ -25,3 +26,4 @@ void onDisconnected(const BlePeerDevice& peer, void* context);
 // send data
 int ble_sendData(const uint8_t* data, size_t size);
 
+#endif
