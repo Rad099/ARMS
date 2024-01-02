@@ -56,10 +56,10 @@ BleCharacteristic AQICharacteristic("AQI", BleCharacteristicProperty::NOTIFY, AQ
 
 
 // Service for retreiving thresholds
-BleUuid ThresholdService("");
-BleUuid ThreshUuid("");
+BleUuid ThresholdService("74fa8bf8-f838-4ce2-97f3-fc618bd0031d");
+BleUuid ThreshCharUuid("3c1c90fb-5e1a-427b-9b43-17ce2d47ba9a");
 // characterisitic
-BleCharacteristic pm1Char("Tresholds", BleCharacteristicProperty::WRITE_WO_RSP, ThreshUuid, ThresholdService, onDataReceived, NULL);
+BleCharacteristic pm1Char("Tresholds", BleCharacteristicProperty::WRITE_WO_RSP, ThreshCharUuid, ThresholdService, onDataReceived, NULL);
 
 
 void MainHandler(); //  main loop for reading and notifying
@@ -78,10 +78,6 @@ const int UV_pin = A1;
 const int CO_pin = A2;
 const int p750_read_pin = D0;
 const int clock_pin = D1;
-
-const int sleepTime = 20000;
-const int bufferTime = 5000;
-
 
 bool threshConfigMode = true;
 bool isSet = false;
@@ -152,6 +148,12 @@ void loop() {
 void MainHandler() {
   static unsigned long lastReadTime = 0;
   static bool inConfirmMinute = false;
+  static uint16_t pm1_val = 0;
+  static uint16_t pm2_5_val = 0;
+  static uint16_t pm10_val = 0;
+  static uint16_t voc_val = 0;
+  static uint16_t co_val = 0;
+  static uint16_t uv_val = 0;
 
  // if (millis() - lastReadTime > (inConfirmMinute ? 1000: 60000)) {
 
