@@ -22,6 +22,10 @@ float AQI(uint8_t C, uint8_t BPL, uint8_t BPH, uint8_t IL, uint8_t IH);
 
 float findBreakpoint(uint8_t c, const Breakpoint breakpoints[]);
 
+float movingAverage();
+
+
+
 
 
 

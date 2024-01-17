@@ -30,6 +30,11 @@ int toggleTransmission(int mode) {
     }
 }
 
+void setWireSleep(bool sleep) {
+    if (sleep) {
+        
+    }
+}
 
 uint16_t readData(uint8_t type, uint8_t addr) {
     Wire.beginTransmission(addr);
