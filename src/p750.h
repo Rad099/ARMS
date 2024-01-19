@@ -15,10 +15,14 @@
 #include "particle.h"
 
 // I2C Command registers
-extern const uint8_t pm1Reg = 0x00;
-extern const uint8_t pm2_5Reg = 0x02;
-extern const uint8_t pm10Reg = 0x04;
-extern const uint8_t vocReg = 0x20;
+extern const uint8_t pm1Reg_H = 0x00;
+extern const uint8_t pm1Reg_L = 0x01;
+extern const uint8_t pm2_5Reg_H = 0x02;
+extern const uint8_t pm2_5Reg_L = 0x03;
+extern const uint8_t pm10Reg_H = 0x04;
+extern const uint8_t pm10Reg_L = 0x05;
+extern const uint8_t vocReg_H = 0x20;
+extern const uint8_t vocReg_L = 0x21;
 extern const uint8_t I2CAddr = 0x12;
 
 void setupI2C();
@@ -28,9 +32,7 @@ int toggleTransmission(u_int8_t mode);
 
 void setWireSleep(bool sleep);
 
-
-
-int readData(uint8_t type);
+uint16_t readData(uint8_t highReg, uint8_t lowReg);
 
 #endif
 

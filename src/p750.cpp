@@ -16,8 +16,8 @@
 
 // setup and begin
 void setupI2C() {
-    Wire.setSpeed(CLOCK_SPEED_100KHZ);
     Wire.begin();
+    Wire.setSpeed(CLOCK_SPEED_100KHZ);
     
 }
 
@@ -36,14 +36,17 @@ void setWireSleep(bool sleep) {
     }
 }
 
-uint16_t readData(uint8_t type, uint8_t addr) {
-    Wire.beginTransmission(addr);
-    Wire.write(type);
+uint16_t readData(uint8_t highReg, uint8_t lowReg) {
+    Wire.beginTransmission(I2CAddr);
+    Wire.write(highReg);
     Wire.endTransmission(false);
 
-    Wire.requestFrom((int)addr, 1);
-    while(!Wire.available());
-
-    return Wire.read();
-
+    Wire.requestFrom((int)I2CAddr, (uint8_t) 2);
+    if (Wire.available() >= 2) {
+        uint16_t highByte = Wire.read();
+        uint16_t lowByte = Wire.read();
+        return ((highByte << 8) | lowByte);
+    } else {
+        return 0; // error occurred
+    }
 }

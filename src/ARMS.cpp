@@ -139,6 +139,7 @@ void MainHandler() {
     // read sensors
     // Apply EMA
     // I2C from p750 reading requires 30 seconds
+    I2CHandler();
 
     // after I2C, read CO sensor for 
 
@@ -164,8 +165,18 @@ void MainHandler() {
 void onDataReceived(const uint16_t* data, size_t len, const BlePeerDevice& peer, void* context) {
   if (len == sizeof(userThresholds)) {
     memcpy(&thresholds, data, sizeof(thresholds));
-
+    
   }
+}
+
+void I2CHandler() {
+  delay(30000);
+  uint16_t pm1 = readData(pm1Reg_H, pm1Reg_L);
+  uint16_t pm2_5 = readData(pm2_5Reg_H, pm2_5Reg_L);
+  uint16_t pm10  = readData(pm10Reg_H, pm10Reg_L);
+  uint16_t vocIAQI = readData(vocReg_H, vocReg_L);
+
+   Serial.printlnf("PM1: %d, PM2.5: %d, PM10: %d, IAQ: %d", pm1, pm2_5, pm10, vocIAQI);
 }
 
 
