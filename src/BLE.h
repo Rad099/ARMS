@@ -12,7 +12,7 @@
 #define BLE_H
 
 
-
+#include "Particle.h"
 
 // BLE functions
 

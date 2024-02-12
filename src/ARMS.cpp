@@ -13,6 +13,7 @@
 #include "BLE.h"
 #include "p750.h"
 #include "uv.h"
+#include "battery.h"
 
 
 // Manual Cloud
@@ -36,17 +37,15 @@ BleUuid AQIService("38bdd4ec-fee9-4e99-b045-a3911a7171cd");
 BleUuid AQICharUuid("d6eedc89-58c6-4d64-8120-f31737032cd0");
 BleCharacteristic AQICharacteristic("AQI", BleCharacteristicProperty::NOTIFY, AQICharUuid, AQIService);
 
-
-// Service for retreiving thresholds
-//BleUuid ThresholdService("74fa8bf8-f838-4ce2-97f3-fc618bd0031d");
-//BleUuid ThreshCharUuid("3c1c90fb-5e1a-427b-9b43-17ce2d47ba9a");
-// characterisitic
-//BleCharacteristic pm1Char("Tresholds", BleCharacteristicProperty::WRITE_WO_RSP, ThreshCharUuid, ThresholdService, onDataReceived, NULL);
-
 // status service: used for notifying the app to stop creating AQI
 BleUuid StatusService("");
 BleUuid photonStatusCharUuid("");
 BleUuid appStatusCharUuid("");
+
+// battery service
+BleUuid BatteryService("180F");
+BleCharacteristic BatteryLevelCharacteristic("2A19", BleCharacteristicProperty::READ | BleCharacteristicProperty::NOTIFY);
+
 
 BleCharacteristic photonStatus("Photon Status", BleCharacteristicProperty::NOTIFY, appStatusCharUuid, StatusService);
 BleCharacteristic appStatus("App status", BleCharacteristicProperty::WRITE_WO_RSP, photonStatusCharUuid, StatusService, onDataReceived, NULL);
@@ -60,27 +59,31 @@ void BLEStartupHandler();
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
 
-// set values
-void waitForThresholds();
-// change values during loop
-void changeTreshISR(bool& mode, bool& isSet);
+
+// handles reading from AQI sensors and sends via BLE
+void I2CHandler();
 
 
 // pins
-const uint8_t UV_pin = A1; // COMFIRM: confirm if uint8 works. switch back to int if not.
+const uint8_t UV_pin = A1;
 const uint8_t CO_pin = A2;
-const uint8_t p750_read_pin = D0;
-const uint8_t clock_pin = D1;
+const uint8_t set_pin = D2;
+
 
 bool threshConfigMode = true;
 bool isSet = false;
+
+
+// SECTION: global storage and variables
+char sensorBuffer[12];
+
 
 // setup() runs once, when the device is first turned on
 void setup() {
   // Put initialization like pinMode and begin functions here
 
 
-  //Serial.begin(9600);
+  Serial.begin(9600);
 
 
   // BLE section
@@ -89,6 +92,10 @@ void setup() {
  
 
   BleAdvertisingData advData;
+
+  // battery charging status interrupt
+  pinMode(CHG, INPUT_PULLUP);
+  attachInterrupt(CHG, chargingHandler, CHANGE);
 
   advData.appendServiceUUID(AQIService);
   
@@ -127,13 +134,6 @@ void loop() {
 
 void MainHandler() {
   static unsigned long lastReadTime = 0;
-  //static bool inConfirmMinute = false;
-  static uint16_t pm1_val = 0;
-  static uint16_t pm2_5_val = 0;
-  static uint16_t pm10_val = 0;
-  static uint16_t voc_val = 0;
-  static uint16_t co_val = 0;
-  static uint16_t uv_val = 0;
 
   if (millis() - lastReadTime >= 300000) {
     // read sensors
@@ -144,7 +144,6 @@ void MainHandler() {
     // after I2C, read CO sensor for 
 
     // combine values to one buffer
-
     // send via AQIChar
 
     // sleep for 5 minutes
@@ -162,25 +161,40 @@ void MainHandler() {
 }
 
 
-void onDataReceived(const uint16_t* data, size_t len, const BlePeerDevice& peer, void* context) {
-  if (len == sizeof(userThresholds)) {
-    memcpy(&thresholds, data, sizeof(thresholds));
+//void onDataReceived(const uint16_t* data, size_t len, const BlePeerDevice& peer, void* context) {
+ // if (len == sizeof(userThresholds)) {
+   // memcpy(&thresholds, data, sizeof(thresholds));
     
-  }
-}
+  //}
+//}
 
 void I2CHandler() {
-  delay(30000);
-  uint16_t pm1 = readData(pm1Reg_H, pm1Reg_L);
-  uint16_t pm2_5 = readData(pm2_5Reg_H, pm2_5Reg_L);
-  uint16_t pm10  = readData(pm10Reg_H, pm10Reg_L);
-  uint16_t vocIAQI = readData(vocReg_H, vocReg_L);
 
-   Serial.printlnf("PM1: %d, PM2.5: %d, PM10: %d, IAQ: %d", pm1, pm2_5, pm10, vocIAQI);
+  delay(30000);
+  // TODO: Manage sleep mode for sensor
+
+  uint16_t pm1 = readData(pm1Reg_H);
+  uint16_t pm2_5 = readData(pm2_5Reg_H);
+  uint16_t pm10  = readData(pm10Reg_H);
+  uint16_t vocIAQI = readData(vocReg_H);
+  uint16_t co2 = readData(co2Reg_H);
+  // manage CO here for simplicity
+  uint16_t co = 0;
+
+  // serialization
+  uint16_t values[] = {pm1, pm2_5, pm10, vocIAQI, co2, co};
+  const size_t numValues = sizeof(values) / sizeof(values[0]);
+  uint8_t data[numValues*2];
+
+  for (size_t i = 0; i < numValues; ++i) {
+    data[2*i] = values[i] >> 8; // high byte
+    data[2*i + 1] = values[i] & 0xFF; // low byte
+
+  }
+
+  AQICharacteristic.setValue(data, sizeof(data));
+
+  Serial.printlnf("PM1: %d, PM2.5: %d, PM10: %d, IAQ: %d", pm1, pm2_5, pm10, vocIAQI);
 }
 
 
-
-
-// change values during loop
-void changeTreshISR(bool& mode, bool& isSet);
